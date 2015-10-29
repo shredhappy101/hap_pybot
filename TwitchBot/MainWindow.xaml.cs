@@ -23,6 +23,7 @@ namespace TwitchBot
         private Thread thread;
         private DispatcherTimer dispatcherTimer;
         private string[] info;
+        private bool infoAllowed = true;
         #endregion
         #region Constructor
         public MainWindow(string channelToJoin, string oauth)
@@ -73,7 +74,9 @@ namespace TwitchBot
         }
         private void dispatcherTimer_Tick(object sender, EventArgs e)
         {
-            if ((int)DateTime.Today.DayOfWeek == 1)
+            if (!infoAllowed) return; 
+
+             if ((int)DateTime.Today.DayOfWeek == 1)
             {
                 irc.SendChatMessage(info[0]);
             }
@@ -135,11 +138,19 @@ namespace TwitchBot
         }
         private string[] LoadTextFile(string fileName)
         {
+            string info = @AppDomain.CurrentDomain.BaseDirectory + "info.txt";
+            if (!File.Exists(info))
+            {
+                File.WriteAllText(info, "/me Change what is displayed every 20 minutes in the info.txt file.");
+            }
+
             string[] load = File.ReadAllText(@AppDomain.CurrentDomain.BaseDirectory + fileName).Split('%');
             return load;
         }
         private void CheckChat()
         {
+            bool paused = false;
+
             while (true)
             {
                 string message = irc.ReadMessage();
@@ -148,6 +159,10 @@ namespace TwitchBot
                     Dispatcher.Invoke(() => recieveChat.Text += message + "\n");
                     Dispatcher.Invoke(() => scroll.ScrollToBottom());
 
+                    if (message.Contains("!Pause")) paused = true ? false : true;
+                    if (paused) return;
+
+                    if (message.Contains("!Info")) infoAllowed = true ? false : true;
                     if (message.Contains("!Load")) Load(message);
                     if (message.Contains("!Save")) Save(message);
                     if (message.Contains("!Random")) Random(message);
@@ -250,7 +265,7 @@ namespace TwitchBot
         private void Save(string message)
         {
             string userName = ParseUserName(message);
-            if (userName != "shredhappy101" && userName != "amsuperfly" && userName != "swiftbloodshed")
+            if (userName != "shredhappy101" && userName != "amsuperfly" && userName != "swiftbloodshed") //userName != channelToJoin;
             {
                 irc.SendChatMessage("/me No!");
                 return;
@@ -272,6 +287,14 @@ namespace TwitchBot
                 irc.SendChatMessage("/me No!");
                 return;
             }
+
+            string namesTmp = @AppDomain.CurrentDomain.BaseDirectory + "names.txt";
+            if (!File.Exists(namesTmp))
+            {
+                File.CreateText(namesTmp);
+                irc.SendChatMessage("/me The list is empty");
+            }
+
             string[] names = LoadTextFile("names.txt");
 
             string[] users = names[0].Split(',');
