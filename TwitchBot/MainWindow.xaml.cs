@@ -89,7 +89,7 @@ namespace TwitchBot
             }
             else
             {
-                irc.SendChatMessage("/me It's either Tuesday, Wednesday, or Thursday, so, I have nothing to say...");
+                irc.SendChatMessage("/me Say more stuff!");
             }
         }
         #endregion
