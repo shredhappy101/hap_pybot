@@ -1,114 +1,96 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Windows;
-
 namespace TwitchBot
 {
     public class IrcClient
     {
         #region Globals
-        private string userName;
-        private string channel;
-        private Stopwatch stopwatch = new Stopwatch();
-        private TcpClient tcpClient;
-        private StreamReader inputStream;
-        private StreamWriter outputStream;
-        private bool throttled;
-        private int messageCounter = 0;
-        public bool connected;
+        private static string userName;
+        private static string channel;
+        private static Stopwatch stopwatch = new Stopwatch();
+        private static TcpClient tcpClient = null;
+        private static StreamReader inputStream;
+        private static StreamWriter outputStream;
+        private static bool throttled;
+        private static int messageCounter = 0;
+        public static bool connected;
         #endregion
 
         #region Constructor
-        public IrcClient(string ip, int port, string userName, string password)
+        public static void IrcStart(string ip, int port, string user, string password)
         {
-
-            this.userName = userName;
-            try
-            {
-                tcpClient = new TcpClient(ip, port);
-
-            }
-            catch (SocketException)
-            {
-
-                MessageBox.Show("Unable to get stream!");
-                connected = false;
-                return;
-                
-            }
-            connected = true;
-            inputStream = new StreamReader(tcpClient.GetStream());
-            outputStream = new StreamWriter(tcpClient.GetStream());
-
-            outputStream.WriteLine("PASS " + password);
-            outputStream.WriteLine("NICK " + userName);
-            outputStream.WriteLine("USER " + userName + " 8 * :" + userName);
-            outputStream.Flush();
+            userName = user;
+            connected = InitTcp(ip, port, user, password);
         }
         #endregion
 
         #region Functions
-        public void JoinRoom(string channel)
+        public static void JoinRoom(string ch)
         {
-            this.channel = channel;
+            channel = ch;
             outputStream.WriteLine("JOIN #" + channel);
             outputStream.Flush();
         }
 
-        private void SendIrcMessage(string message)
+        private static void SendIrcMessage(string message)
         {
             outputStream.WriteLine(message);
             outputStream.Flush();
         }
 
-        public void SendChatMessage(string message)
+        public static void SendChatMessage(string message)
         {
-            if (!throttled)
-            {
-                if (stopwatch.Elapsed.Seconds >= 30)
-                {
-                    stopwatch.Stop();
-                    messageCounter = 0;
-                }
-
-                SendIrcMessage(":" + userName + "!" + userName + "@" + userName +
-                ".tmi.twitch.tv PRIVMSG #" + channel + " :" + message);
-                messageCounter++;
-
-                if (messageCounter == 1) stopwatch.Start();
-
-            }
-
-            while (messageCounter == 19)
+            try
             {
                 if (!throttled)
                 {
+                    if (stopwatch.Elapsed.Seconds >= 30)
+                    {
+                        stopwatch.Stop();
+                        messageCounter = 0;
+                    }
+
                     SendIrcMessage(":" + userName + "!" + userName + "@" + userName +
-                    ".tmi.twitch.tv PRIVMSG #" + channel + " :" + "/me " + "So fast! Stopping for " +
-                    (30 - stopwatch.Elapsed.Seconds) + "second(s)");
+                    ".tmi.twitch.tv PRIVMSG #" + channel + " :" + message);
+                    messageCounter++;
+
+                    if (messageCounter == 1) stopwatch.Start();
                 }
 
-                throttled = true;
-
-                if (stopwatch.Elapsed.Seconds >= 30)
+                while (messageCounter == 19)
                 {
-                    stopwatch.Stop();
-                    throttled = false;
-                    messageCounter = 0;
+                    if (!throttled)
+                    {
+                        SendIrcMessage(":" + userName + "!" + userName + "@" + userName +
+                        ".tmi.twitch.tv PRIVMSG #" + channel + " :" + "/me " + "So fast! Stopping for " +
+                        (30 - stopwatch.Elapsed.Seconds) + "second(s)");
+                    }
+
+                    throttled = true;
+
+                    if (stopwatch.Elapsed.Seconds >= 30)
+                    {
+                        stopwatch.Stop();
+                        throttled = false;
+                        messageCounter = 0;
+                    }
+                    Thread.Sleep(20);
                 }
-                Thread.Sleep(20);
             }
+            catch (IOException) { return; }        
         }
 
-        public void Pong()
+        public static void Pong()
         {
             outputStream.WriteLine("PONG tmi.twitch.tv\r\n");
             outputStream.Flush();
         }
 
-        public string ReadMessage()
+        public static string ReadMessage()
         {
             string message;
             try
@@ -120,6 +102,29 @@ namespace TwitchBot
                 return null;
             }
             return message;
+        }
+
+        private static bool InitTcp(string ip, int port, string user, string password)
+        {
+            try
+            {
+                tcpClient = new TcpClient(ip, port);
+            }
+            catch (SocketException)
+            {
+                MessageBox.Show("Unable to get stream! Ip Blocker?");
+                return false;
+            }
+
+            inputStream = new StreamReader(tcpClient.GetStream());
+            outputStream = new StreamWriter(tcpClient.GetStream());
+
+            outputStream.WriteLine("PASS " + password);
+            outputStream.WriteLine("NICK " + userName);
+            outputStream.WriteLine("USER " + userName + " 8 * :" + userName);
+            outputStream.Flush();
+
+            return true;
         }
         #endregion
 

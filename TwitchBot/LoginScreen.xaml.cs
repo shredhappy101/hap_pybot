@@ -2,11 +2,8 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-
-
 namespace TwitchBot
 {
-
     public partial class LoginScreen : Window
     {
         public LoginScreen()
@@ -16,7 +13,7 @@ namespace TwitchBot
             oauthTexBox.Text = LoadAuth();
         }
 
-    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
             this.DragMove();
@@ -29,22 +26,14 @@ namespace TwitchBot
 
         private void loginButton_Click(object sender, MouseButtonEventArgs e)
         {
-            SaveAuth();
-            MainWindow main = new MainWindow(channelTexBox.Text, oauthTexBox.Text);
-            main.Show();
-
-            this.Close();
+            Go();
         }
 
         private void join_Enter(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                SaveAuth();
-                MainWindow main = new MainWindow(channelTexBox.Text, oauthTexBox.Text);
-                main.Show();
-
-                this.Close();
+                Go();
             }
         }
 
@@ -58,6 +47,14 @@ namespace TwitchBot
         private void SaveAuth()
         {
             File.WriteAllText(@AppDomain.CurrentDomain.BaseDirectory + "auth.txt", oauthTexBox.Text);
+        }
+
+        private void Go()
+        {
+            SaveAuth();
+            MainWindow main = new MainWindow(channelTexBox.Text, oauthTexBox.Text);
+            main.Show();
+            this.Close();
         }
     }
 }

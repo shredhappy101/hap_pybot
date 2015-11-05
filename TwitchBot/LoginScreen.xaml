@@ -17,7 +17,7 @@
         <Label x:Name="channelLable" Content="Channel" HorizontalAlignment="Left" Height="26" Margin="7,14,0,0" VerticalAlignment="Top" Width="52" Background="{x:Null}" Foreground="White" Grid.Row="1"/>
         <Label x:Name="oauthLable" Content="oauth:" HorizontalAlignment="Left" Height="24" Margin="15,48,0,0" VerticalAlignment="Top" Width="44" Background="{x:Null}" Foreground="White" Grid.RowSpan="2"/>
         <Button x:Name="closeButton" Content="X" HorizontalAlignment="Left" Margin="266,-1,0,0" VerticalAlignment="Top" Width="16" Background="Black" Foreground="White" BorderThickness="0" BorderBrush="{x:Null}" Height="17" FontSize="8" Click="closeButton_Click"/>
-        <TextBox x:Name="userTextBox" HorizontalAlignment="Left" Height="26" Margin="59,10,0,0" TextWrapping="Wrap" Text="hap_pyBot" VerticalAlignment="Top" Width="200" Foreground="White" Background="{x:Null}"/>
+        <TextBox x:Name="userTextBox" HorizontalAlignment="Left" Height="26" Margin="59,10,0,0" TextWrapping="Wrap" Text="hap_pybot" VerticalAlignment="Top" Width="200" Foreground="White" Background="{x:Null}"/>
         <Label x:Name="channelLable_Copy" Content="User" HorizontalAlignment="Left" Height="26" Margin="25,10,0,0" VerticalAlignment="Top" Width="34" Background="{x:Null}" Foreground="White"/>
         <Grid HorizontalAlignment="Left" Height="235" Margin="-53,-44,0,-49" VerticalAlignment="Top" Width="78" Grid.RowSpan="2">
             <Image x:Name="image" HorizontalAlignment="Right" Height="84" VerticalAlignment="Top" Width="87" RenderTransformOrigin="0.797,0.635" Source="Resources/Hap_pyBot.png" Margin="0,0,-9,0"/>
