@@ -36,13 +36,14 @@ namespace TwitchBot
         }
         private static bool IsAllowed(string userName)
         {
-            if (userName != MainWindow.channelToJoin && userName != "amsuperfly")
+            if (userName != MainWindow.channelToJoin && userName != "shredhappy101")
             {
                 IrcClient.SendChatMessage("/me No!");
                 return false;
             }
             else return true;
         }
+
 
         #region Respond Functions
         public static void Spin(string message)
@@ -74,7 +75,7 @@ namespace TwitchBot
         }
         public static void Commands()
         {
-            IrcClient.SendChatMessage("/me My commands are !Hello, !Trials, !Donate, !List, !VipList, !Strippers, !RickRoll and a few others...");
+            IrcClient.SendChatMessage("/me My commands are !Hello, !Trials, !Donate, !List, !VipList, !Strippers, !RickRoll !Slots and a few others...");
         }
         public static void MillerSucks()
         {
@@ -86,7 +87,7 @@ namespace TwitchBot
         }
         public static void Donate()
         {
-            IrcClient.SendChatMessage("/me If you like my work feel free to donate! Though there is no obligation, it is greatly appreciated. Game on Guardians. " + "https://goo.gl/PNXlyb");
+            IrcClient.SendChatMessage("/me If you like my work feel free to donate! Though there is no obligation, it is greatly appreciated." + "LINK");
         }
         public static void Strippers(string message)
         {
@@ -122,10 +123,7 @@ namespace TwitchBot
         {
             string userName = ParseUserName(message);
 
-            if (userName == "amsuperfly" || userName == "swiftbloodshed" || userName == "shredhappy101")
-            {
-                return;
-            }
+            if (userName == MainWindow.channelToJoin) return;
 
             if (vipUsers.Contains(userName))
             {
@@ -148,7 +146,7 @@ namespace TwitchBot
         {
             string userName = ParseUserName(message);
 
-            if (userName != "amsuperfly" && userName != "swiftbloodshed")
+            if (!IsAllowed(userName))
             {
                 IrcClient.SendChatMessage("/me You do not have permission to add a VIP user!");
                 return;

@@ -10,14 +10,16 @@ namespace TwitchBot
         private static Dictionary<string, int> scores;
         private static int index = 0;
         private static bool win = false;
+        private static Random rand;
         #endregion
 
         #region Constructor
         static Slots()
         {
-            icons = new string[] { "<3", "MrDestructoid", "BloodTrail", "OSrob", "SMSkull" };
+            icons = new string[] { "<3", "MrDestructoid", "BloodTrail", "Kappa", "SMSkull" };
             scores = new Dictionary<string, int>();
             state = new string[3];
+            rand = new Random();
         }
         #endregion
 
@@ -31,7 +33,7 @@ namespace TwitchBot
 
         private static string getRandIcon()
         {
-            Random rand = new Random();
+            
             int randIcon = rand.Next(0, 90);
 
             if (randIcon <= 9) return icons[4];

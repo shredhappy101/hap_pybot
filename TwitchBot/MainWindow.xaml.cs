@@ -167,8 +167,8 @@ namespace TwitchBot
                         && !message.Contains("VIP") 
                         && !message.Contains("Vip")) Bot.List();
 
-                    //if (message.Contains("!Slots")) Respond.Spin(message);
-                    //if (message.Contains("!Score")) Respond.ListScore(message);
+                    if (message.Contains("!Slots")) Bot.Spin(message);
+                    if (message.Contains("!Score")) Bot.ListScore(message);
 
                     if ((message.Contains("!List") 
                         && message.Contains("VIP"))
