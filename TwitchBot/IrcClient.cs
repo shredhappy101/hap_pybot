@@ -9,85 +9,86 @@ namespace TwitchBot
     public class IrcClient
     {
         #region Globals
-        private static string userName;
-        private static string channel;
-        private static Stopwatch stopwatch = new Stopwatch();
-        private static TcpClient tcpClient = null;
-        private static StreamReader inputStream;
-        private static StreamWriter outputStream;
-        private static bool throttled;
-        private static int messageCounter = 0;
-        public static bool connected;
+        private static string _userName;
+        private static string _channel;
+        private static Stopwatch _stopwatch;
+        private static TcpClient _tcpClient = null;
+        private static StreamReader _inputStream;
+        private static StreamWriter _outputStream;
+        private static bool _throttled;
+        private static int _messageCounter = 0;
+        public static bool Connected;
         #endregion
 
         #region Constructor
         public static void IrcStart(string ip, int port, string user, string password)
         {
-            userName = user;
-            connected = InitTcp(ip, port, user, password);
+            _userName = user;
+            Connected = InitTcp(ip, port, user, password);
+            _stopwatch = new Stopwatch();
         }
         #endregion
 
         #region Functions
         public static void JoinRoom(string ch)
         {
-            channel = ch;
-            outputStream.WriteLine("JOIN #" + channel);
-            outputStream.Flush();
+            _channel = ch;
+            _outputStream.WriteLine("JOIN #" + _channel);
+            _outputStream.Flush();
         }
 
         private static void SendIrcMessage(string message)
         {
-            outputStream.WriteLine(message);
-            outputStream.Flush();
+            _outputStream.WriteLine(message);
+            _outputStream.Flush();
         }
 
         public static void SendChatMessage(string message)
         {
             try
             {
-                if (!throttled)
+                if (!_throttled)
                 {
-                    if (stopwatch.Elapsed.Seconds >= 30)
+                    if (_stopwatch.Elapsed.Seconds >= 30)
                     {
-                        stopwatch.Stop();
-                        messageCounter = 0;
+                        _stopwatch.Stop();
+                        _messageCounter = 0;
                     }
 
-                    SendIrcMessage(":" + userName + "!" + userName + "@" + userName +
-                    ".tmi.twitch.tv PRIVMSG #" + channel + " :" + message);
-                    messageCounter++;
+                    SendIrcMessage(":" + _userName + "!" + _userName + "@" + _userName +
+                    ".tmi.twitch.tv PRIVMSG #" + _channel + " :" + message);
+                    _messageCounter++;
 
-                    if (messageCounter == 1) stopwatch.Start();
+                    if (_messageCounter == 1) _stopwatch.Start();
                 }
 
-                while (messageCounter == 19)
+                while (_messageCounter == 19)
                 {
-                    if (!throttled)
+                    if (!_throttled)
                     {
-                        SendIrcMessage(":" + userName + "!" + userName + "@" + userName +
-                        ".tmi.twitch.tv PRIVMSG #" + channel + " :" + "/me " + "So fast! Stopping for " +
-                        (30 - stopwatch.Elapsed.Seconds) + "second(s)");
+                        SendIrcMessage(":" + _userName + "!" + _userName + "@" + _userName +
+                        ".tmi.twitch.tv PRIVMSG #" + _channel + " :" + "/me " + "So fast! Stopping for " +
+                        (30 - _stopwatch.Elapsed.Seconds) + "second(s)");
                     }
 
-                    throttled = true;
+                    _throttled = true;
 
-                    if (stopwatch.Elapsed.Seconds >= 30)
+                    if (_stopwatch.Elapsed.Seconds >= 30)
                     {
-                        stopwatch.Stop();
-                        throttled = false;
-                        messageCounter = 0;
+                        _stopwatch.Stop();
+                        _throttled = false;
+                        _messageCounter = 0;
                     }
                     Thread.Sleep(20);
                 }
             }
-            catch (IOException) { return; }        
+            catch (IOException) { return; }
         }
 
         public static void Pong()
         {
-            outputStream.WriteLine("PONG tmi.twitch.tv\r\n");
-            outputStream.Flush();
+            _outputStream.WriteLine("PONG tmi.twitch.tv\r\n");
+            _outputStream.Flush();
         }
 
         public static string ReadMessage()
@@ -95,7 +96,7 @@ namespace TwitchBot
             string message;
             try
             {
-                message = inputStream.ReadLine();
+                message = _inputStream.ReadLine();
             }
             catch (System.Exception)
             {
@@ -108,7 +109,7 @@ namespace TwitchBot
         {
             try
             {
-                tcpClient = new TcpClient(ip, port);
+                _tcpClient = new TcpClient(ip, port);
             }
             catch (SocketException)
             {
@@ -116,17 +117,16 @@ namespace TwitchBot
                 return false;
             }
 
-            inputStream = new StreamReader(tcpClient.GetStream());
-            outputStream = new StreamWriter(tcpClient.GetStream());
+            _inputStream = new StreamReader(_tcpClient.GetStream());
+            _outputStream = new StreamWriter(_tcpClient.GetStream());
 
-            outputStream.WriteLine("PASS " + password);
-            outputStream.WriteLine("NICK " + userName);
-            outputStream.WriteLine("USER " + userName + " 8 * :" + userName);
-            outputStream.Flush();
+            _outputStream.WriteLine("PASS " + password);
+            _outputStream.WriteLine("NICK " + _userName);
+            _outputStream.WriteLine("USER " + _userName + " 8 * :" + _userName);
+            _outputStream.Flush();
 
             return true;
         }
         #endregion
-
     }
 }

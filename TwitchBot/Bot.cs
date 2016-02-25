@@ -8,35 +8,42 @@ namespace TwitchBot
 {
     public static class Bot
     {
-        private static List<string> joinedUsers = new List<string>();
-        private static List<string> vipUsers = new List<string>();
-        private static string dir = @AppDomain.CurrentDomain.BaseDirectory;
+        private static List<string> _joinedUsers;
+        private static List<string> _vipUsers;
+        private static readonly string Dir;
+        private static readonly Random Rand;
 
-
+        static Bot()
+        {
+            Rand = new Random();
+            Dir = @AppDomain.CurrentDomain.BaseDirectory;
+            _joinedUsers = new List<string>();
+            _vipUsers = new List<string>();
+        }
         private static string ParseUserName(string message)
         {
-            string userName = message.Split('!')[0].TrimStart(new char[] { ':' });
+            var userName = message.Split('!')[0].TrimStart(new char[] { ':' });
             return userName;
         }
         public static string[] LoadTextFile(string fileName)
         {
-            string text = fileName + ".txt";
+            var text = fileName + ".txt";
             if (!File.Exists(text)) File.WriteAllText(text, "%");
 
-            string[] load = File.ReadAllText(dir + text).Split('%');
+            var load = File.ReadAllText(Dir + text).Split('%');
             return load;
         }
         private static void ParseNames()
         {
-            string[] names = LoadTextFile("names");
-            string[] users = names[0].Split(',');
-            string[] VIP = names[1].Split(',');
-            joinedUsers = users.ToList();
-            vipUsers = VIP.ToList();
+            var names = LoadTextFile("names");
+            var users = names[0].Split(',');
+            var vip = names[1].Split(',');
+            _joinedUsers = users.ToList();
+            _vipUsers = vip.ToList();
         }
         private static bool IsAllowed(string userName)
         {
-            if (userName != MainWindow.channelToJoin && userName != "shredhappy101")
+            if (userName != MainWindow.ChannelToJoin && userName != "shredhappy101")
             {
                 IrcClient.SendChatMessage("/me No!");
                 return false;
@@ -44,20 +51,19 @@ namespace TwitchBot
             else return true;
         }
 
-
         #region Respond Functions
         public static void Spin(string message)
         {
-            string user = ParseUserName(message);
+            var user = ParseUserName(message);
 
-            Tuple<string[], bool, int> results = Slots.Spin(user);
+            var results = Slots.Spin(user);
             if (results == null)
             {
                 return;
             }
             IrcClient.SendChatMessage("/me " + results.Item1[0] + " " + results.Item1[1] + " " + results.Item1[2]);
 
-            int score = results.Item3;
+            var score = results.Item3;
             if (results.Item2 == true)
             {
                 IrcClient.SendChatMessage("/me " + user + " plus " + score + " points!");
@@ -65,12 +71,12 @@ namespace TwitchBot
         }
         public static void ListScore(string message)
         {
-            string user = ParseUserName(message);
+            var user = ParseUserName(message);
             IrcClient.SendChatMessage("/me " + user + " has " + Slots.Score(user) + " points!");
         }
         public static void GreetUser(string message)
         {
-            string user = ParseUserName(message);
+            var user = ParseUserName(message);
             IrcClient.SendChatMessage("/me Hello " + user + "!");
         }
         public static void Commands()
@@ -99,132 +105,122 @@ namespace TwitchBot
         }
         public static void SaveNames(string message)
         {
-            string userName = ParseUserName(message);
-            if (IsAllowed(userName))
-            {
-                string users = "";
-                users = string.Join(",", joinedUsers);
+            var userName = ParseUserName(message);
+            if (!IsAllowed(userName)) return;
+            var users = "";
+            users = string.Join(",", _joinedUsers);
 
-                string vip = "";
-                vip = string.Join(",", vipUsers);
+            var vip = "";
+            vip = string.Join(",", _vipUsers);
 
-                File.WriteAllText(dir + "names.txt", users + "%" + vip);
-                IrcClient.SendChatMessage("/me List saved!");
-            }
+            File.WriteAllText(Dir + "names.txt", users + "%" + vip);
+            IrcClient.SendChatMessage("/me List saved!");
         }
         public static void LoadNames(string message)
         {
-            string userName = ParseUserName(message);
+            var userName = ParseUserName(message);
             IsAllowed(userName);
             ParseNames();
             IrcClient.SendChatMessage("/me List loaded!");
         }
         public static void Trials(string message)
         {
-            string userName = ParseUserName(message);
+            var userName = ParseUserName(message);
 
-            if (userName == MainWindow.channelToJoin) return;
+            if (userName == MainWindow.ChannelToJoin) return;
 
-            if (vipUsers.Contains(userName))
+            if (_vipUsers.Contains(userName))
             {
-                IrcClient.SendChatMessage("/me" + userName + ", no need, VIP!");
+                IrcClient.SendChatMessage("/me" + userName + ", no need, Vip!");
                 return;
             }
-            if (!joinedUsers.Contains(userName))
+            if (!_joinedUsers.Contains(userName))
             {
-                joinedUsers.Add(userName);
+                _joinedUsers.Add(userName);
                 IrcClient.SendChatMessage("/me" + userName + " has signed up for Trials! ");
                 return;
             }
             else
-            {  
+            {
                 IrcClient.SendChatMessage("/me You've already signed up, " + userName + "! This guy's tryn' to cheat! Kappa");
                 return;
             }
         }
-        public static void VIP(string message)
+        public static void Vip(string message)
         {
-            string userName = ParseUserName(message);
+            var userName = ParseUserName(message);
 
             if (!IsAllowed(userName))
             {
-                IrcClient.SendChatMessage("/me You do not have permission to add a VIP user!");
+                IrcClient.SendChatMessage("/me You do not have permission to add a Vip user!");
                 return;
             }
 
-            string userToVIP = message.Split(' ')[4];
-            if (vipUsers.Contains(userToVIP))
+            var userToVip = message.Split(' ')[4];
+            if (_vipUsers.Contains(userToVip))
             {
-                IrcClient.SendChatMessage("/me" + userName + " is already a VIP!");
+                IrcClient.SendChatMessage("/me" + userName + " is already a Vip!");
             }
-            joinedUsers.Remove(userToVIP);
-            vipUsers.Add(userToVIP);
-            IrcClient.SendChatMessage("/me You added " + userToVIP + "!");
+            _joinedUsers.Remove(userToVip);
+            _vipUsers.Add(userToVip);
+            IrcClient.SendChatMessage("/me You added " + userToVip + "!");
         }
         public static void Remove(string message)
         {
-            string userName = ParseUserName(message);
-            if (IsAllowed(userName))
+            var userName = ParseUserName(message);
+            if (!IsAllowed(userName)) return;
+            var userToRemove = message.Split(' ')[4];
+            if (!_joinedUsers.Contains(userToRemove))
             {
-                string userToRemove = message.Split(' ')[4];
-                if (!joinedUsers.Contains(userToRemove))
-                {
-                    IrcClient.SendChatMessage(userToRemove + " is not on the list!");
-                    return;
-                }
-                joinedUsers.Remove(userToRemove);
-                IrcClient.SendChatMessage("/me You removed " + userToRemove + "!");
+                IrcClient.SendChatMessage(userToRemove + " is not on the list!");
+                return;
             }
+            _joinedUsers.Remove(userToRemove);
+            IrcClient.SendChatMessage("/me You removed " + userToRemove + "!");
         }
-        public static void RemoveVIP(string message)
+        public static void RemoveVip(string message)
         {
-            string userName = ParseUserName(message);
+            var userName = ParseUserName(message);
 
-            if (IsAllowed(userName))
+            if (!IsAllowed(userName)) return;
+            var userToRemove = message.Split(' ')[4];
+            if (!_vipUsers.Contains(userToRemove))
             {
-                string userToRemove = message.Split(' ')[4];
-                if (!vipUsers.Contains(userToRemove))
-                {
-                    IrcClient.SendChatMessage(userToRemove + " is not a VIP!");
-                    return;
-                }
-                vipUsers.Remove(userToRemove);
-                IrcClient.SendChatMessage("/me You removed " + userToRemove + "!");
+                IrcClient.SendChatMessage(userToRemove + " is not a Vip!");
+                return;
             }
+            _vipUsers.Remove(userToRemove);
+            IrcClient.SendChatMessage("/me You removed " + userToRemove + "!");
         }
         public static void List()
         {
-            if (joinedUsers.Count == 0)
+            if (_joinedUsers.Count == 0)
             {
                 IrcClient.SendChatMessage("/me The Follower list is empty!");
                 return;
             }
-            string users = "";
-            users = string.Join(", ", joinedUsers);
+            var users = "";
+            users = string.Join(", ", _joinedUsers);
             IrcClient.SendChatMessage("/me Followers: " + users);
         }
-        public static void ListVIP()
+        public static void ListVip()
         {
-            if (vipUsers.Count == 0)
+            if (_vipUsers.Count == 0)
             {
-                IrcClient.SendChatMessage("/me The VIP list is empty!");
+                IrcClient.SendChatMessage("/me The Vip list is empty!");
                 return;
             }
-            string vip = "";
-            vip = string.Join(", ", vipUsers);
-            IrcClient.SendChatMessage("/me VIP: " + vip);
+            var vip = "";
+            vip = string.Join(", ", _vipUsers);
+            IrcClient.SendChatMessage("/me Vip: " + vip);
         }
         public static void Random(string message)
         {
-            string userName = ParseUserName(message);
-            if (IsAllowed(userName))
-            {
-                Random rand = new Random();
-                IrcClient.SendChatMessage("/me Congrats! " + joinedUsers[rand.Next(1, joinedUsers.Count)] + " has been chosen for Trials!");
-            }
+            var userName = ParseUserName(message);
+            if (!IsAllowed(userName)) return;
+
+            IrcClient.SendChatMessage("/me Congrats! " + _joinedUsers[Rand.Next(1, _joinedUsers.Count)] + " has been chosen for Trials!");
         }
         #endregion
-
-
     }
 }

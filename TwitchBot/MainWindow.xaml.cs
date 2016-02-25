@@ -9,21 +9,22 @@ namespace TwitchBot
     public partial class MainWindow : Window
     {
         #region Globals
-        public static string channelToJoin;
-        private string oauth;
-        private Thread thread;
-        private DispatcherTimer infoDisplayTimer;
-        private string[] info;
-        private bool infoAllowed = true;
-        private int infoInterval = 30;
+        public static string ChannelToJoin;
+        private readonly string _oauth;
+        private Thread _thread;
+        private DispatcherTimer _infoDisplayTimer;
+        private string[] _info;
+        private bool _infoAllowed = true;
+        private const int InfoInterval = 30;
+
         #endregion
 
         #region Constructor
         public MainWindow(string chToJoin, string oauth)
         {
             InitializeComponent();
-            channelToJoin = chToJoin;
-            this.oauth = oauth;
+            ChannelToJoin = chToJoin;
+            this._oauth = oauth;
             Initialization();
         }
         #endregion
@@ -42,28 +43,39 @@ namespace TwitchBot
         }
         private void send_Enter(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter)
-            {
-                IrcClient.SendChatMessage(sendChat.Text);
-                recieveChat.Text += "PRIVMSG #" + "hap_pyBot" + " :" + sendChat.Text + "\n";
-                sendChat.Text = "";
-            }
+            if (e.Key != Key.Enter) return;
+            IrcClient.SendChatMessage(sendChat.Text);
+            recieveChat.Text += "PRIVMSG #" + "hap_pyBot" + " :" + sendChat.Text + "\n";
+            sendChat.Text = "";
         }
         private void closeButton_Click(object sender, RoutedEventArgs e)
         {
-            MessageBoxResult m = MessageBox.Show("Save the name list?", "Save?", MessageBoxButton.YesNoCancel);
+            var m = MessageBox.Show("Save the name list?", "Save?", MessageBoxButton.YesNoCancel);
 
-            if (m == MessageBoxResult.Yes) Bot.SaveNames(channelToJoin);
-            
-            else if (m == MessageBoxResult.Cancel) return;
-
+            switch (m)
+            {
+                case MessageBoxResult.Yes:
+                    Bot.SaveNames(ChannelToJoin);
+                    break;
+                case MessageBoxResult.Cancel:
+                    return;
+                case MessageBoxResult.None:
+                    break;
+                case MessageBoxResult.OK:
+                    break;
+                case MessageBoxResult.No:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
             Application.Current.Shutdown();
-            
         }
+
         private void minimizeButton_Click(object sender, RoutedEventArgs e)
         {
             this.WindowState = WindowState.Minimized;
         }
+
         private void delete_Default(object sender, MouseEventArgs e)
         {
             if (sendChat.Text == "Send a message")
@@ -72,64 +84,67 @@ namespace TwitchBot
             }
             sendChat.Focus();
         }
+
         private void infoDisplayTimer_Tick(object sender, EventArgs e)
         {
-            if (!infoAllowed) return; 
+            if (!_infoAllowed) return;
 
-             if ((int)DateTime.Today.DayOfWeek == 1)
+            switch ((int)DateTime.Today.DayOfWeek)
             {
-                IrcClient.SendChatMessage(info[0]);
-            }
-
-            else if ((int)DateTime.Today.DayOfWeek == 5
-                  || (int)DateTime.Today.DayOfWeek == 6
-                  || (int)DateTime.Today.DayOfWeek == 7)
-            {
-                IrcClient.SendChatMessage(info[1]);
-            }
-            else
-            {
-                IrcClient.SendChatMessage("/me Say more stuff!");
+                case 1:
+                    IrcClient.SendChatMessage(_info[0]);
+                    break;
+                case 5:
+                case 6:
+                case 7:
+                    IrcClient.SendChatMessage(_info[1]);
+                    break;
+                default:
+                    IrcClient.SendChatMessage("/me Say more stuff!");
+                    break;
             }
         }
+
         #endregion
 
         #region Functions
+
         private void Initialization()
         {
-            infoDisplayTimer = new System.Windows.Threading.DispatcherTimer();
-            infoDisplayTimer.Tick += new EventHandler(infoDisplayTimer_Tick);
-            infoDisplayTimer.Interval = new TimeSpan(0, infoInterval, 0);
-            infoDisplayTimer.Start();
+            _infoDisplayTimer = new System.Windows.Threading.DispatcherTimer();
+            _infoDisplayTimer.Tick += new EventHandler(infoDisplayTimer_Tick);
+            _infoDisplayTimer.Interval = new TimeSpan(0, InfoInterval, 0);
+            _infoDisplayTimer.Start();
 
-            info = Bot.LoadTextFile("info");
+            _info = Bot.LoadTextFile("_info");
             scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
 
-            IrcClient.IrcStart("irc.twitch.tv", 6667, "hap_pybot", "oauth:" + oauth);
-            if (IrcClient.connected)
+            IrcClient.IrcStart("irc.twitch.tv", 6667, "hap_pybot", "_oauth:" + _oauth);
+            if (IrcClient.Connected)
             {
-                IrcClient.JoinRoom(channelToJoin);
+                IrcClient.JoinRoom(ChannelToJoin);
                 StartThread();
             }
             else Application.Current.Shutdown();
-
         }
+
         private void StartThread()
         {
-            thread = new Thread(() => CheckChat());
-            thread.IsBackground = true;
-            thread.Start();
+            _thread = new Thread(CheckChat) { IsBackground = true };
+            _thread.Start();
         }
+
         private void CheckChat()
         {
-            bool paused = false;
+            var paused = false;
 
             while (true)
             {
-                string message = IrcClient.ReadMessage();
+                var message = IrcClient.ReadMessage();
                 if (message != null)
                 {
-                    Dispatcher.Invoke(() => recieveChat.Text += message + "\n");
+                    var localMessage = message;
+                    Dispatcher.Invoke(() => recieveChat.Text += localMessage + "\n");
                     Dispatcher.Invoke(() => scroll.ScrollToBottom());
 
 
@@ -137,58 +152,46 @@ namespace TwitchBot
                     if (message.Contains("!Pause")) paused = true;
                     while (paused)
                     {
-                        string pausedMessage = IrcClient.ReadMessage();
+                        var pausedMessage = IrcClient.ReadMessage();
                         if (pausedMessage.Contains("PING")) IrcClient.Pong();
                         if (pausedMessage.Contains("!Pause")) paused = false;
                         Thread.Sleep(80);
                     }
 
 
-                    if (message.Contains("!Info")) infoAllowed = true ? false : true;
+                    if (message.Contains("!Info")) _infoAllowed = !_infoAllowed;
                     if (message.Contains("!Load")) Bot.LoadNames(message);
                     if (message.Contains("!Save")) Bot.SaveNames(message);
                     if (message.Contains("!Random")) Bot.Random(message);
 
-                    if (message.Contains("!Remove ") 
-                        && !message.Contains("VIP")) Bot.Remove(message);
-                    if (message.Contains("!Remove") 
-                        && message.Contains("VIP ")) Bot.RemoveVIP(message);
+                    if (message.Contains("!Remove ") && !message.Contains("Vip")) Bot.Remove(message);
+                    if (message.Contains("!Remove") && message.Contains("Vip ")) Bot.RemoveVip(message);
 
                     if (message.Contains("!Hello")) Bot.GreetUser(message);
                     if (message.Contains("!RickRoll")) Bot.RickRoll(message);
                     if (message.Contains("!Strippers")) Bot.Strippers(message);
                     if (message.Contains("!Trials")) Bot.Trials(message);
-                    if (message.Contains("!VIP ")) Bot.VIP(message);
+                    if (message.Contains("!Vip ")) Bot.Vip(message);
                     if (message.Contains("!Donate")) Bot.Donate();
 
-                    if (message.Contains("!Commands") 
-                        || message.Contains("!commands")) Bot.Commands();
-                    if (message.Contains("!List")
-                        && !message.Contains("VIP") 
-                        && !message.Contains("Vip")) Bot.List();
+                    if (message.Contains("!Commands") || message.Contains("!commands")) Bot.Commands();
+                    if (message.Contains("!List") && !message.Contains("Vip") && !message.Contains("Vip")) Bot.List();
 
                     if (message.Contains("!Slots")) Bot.Spin(message);
                     if (message.Contains("!Score")) Bot.ListScore(message);
 
-                    if ((message.Contains("!List") 
-                        && message.Contains("VIP"))
-                        || message.Contains("!VipList")
-                        || message.Contains("!VIPList")
-                        || message.Contains("!ListVip")) Bot.ListVIP();
+                    if ((message.Contains("!List") && message.Contains("Vip")) || message.Contains("!VipList") || message.Contains("!VIPList") || message.Contains("!ListVip")) Bot.ListVip();
 
-                    if (message.Contains("!Millersucks")
-                        || message.Contains("!MillerSucks")
-                        || message.Contains("!millersucks")) Bot.MillerSucks();
+                    if (message.Contains("!Millersucks") || message.Contains("!MillerSucks") || message.Contains("!millersucks")) Bot.MillerSucks();
 
-                    if (message.Contains("!CandyBar")
-                        || message.Contains("!Candybar")
-                        || message.Contains("!candybar")) Bot.CandyBar();
+                    if (message.Contains("!CandyBar") || message.Contains("!Candybar") || message.Contains("!candybar")) Bot.CandyBar();
 
                     message = null;
                 }
                 Thread.Sleep(40);
             }
         }
+
         #endregion
     }
 }
