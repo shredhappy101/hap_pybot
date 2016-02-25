@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 namespace TwitchBot
 {
-    public partial class LoginScreen : Window
+    public partial class LoginScreen
     {
         public LoginScreen()
         {
@@ -16,7 +16,7 @@ namespace TwitchBot
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
-            this.DragMove();
+            DragMove();
         }
 
         private void closeButton_Click(object sender, RoutedEventArgs e)
@@ -37,11 +37,10 @@ namespace TwitchBot
             }
         }
 
-        private string LoadAuth()
+        private static string LoadAuth()
         {
-            string namesTmp = @AppDomain.CurrentDomain.BaseDirectory + "auth.txt";
-            if (File.Exists(namesTmp)) return File.ReadAllText(namesTmp);
-            else return "";
+            var namesTmp = @AppDomain.CurrentDomain.BaseDirectory + "auth.txt";
+            return File.Exists(namesTmp) ? File.ReadAllText(namesTmp) : "";
         }
 
         private void SaveAuth()
@@ -52,9 +51,9 @@ namespace TwitchBot
         private void Go()
         {
             SaveAuth();
-            MainWindow main = new MainWindow(channelTexBox.Text, oauthTexBox.Text);
+            var main = new MainWindow(channelTexBox.Text, oauthTexBox.Text);
             main.Show();
-            this.Close();
+            Close();
         }
     }
 }

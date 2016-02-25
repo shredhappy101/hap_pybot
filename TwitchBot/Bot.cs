@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Windows.Threading;
 
 namespace TwitchBot
 {
@@ -10,25 +9,25 @@ namespace TwitchBot
     {
         private static List<string> _joinedUsers;
         private static List<string> _vipUsers;
-        private static readonly string Dir;
+        private static readonly string Dir = @AppDomain.CurrentDomain.BaseDirectory;
         private static readonly Random Rand;
 
-        static Bot()
+        static Bot() 
         {
-            Rand = new Random();
-            Dir = @AppDomain.CurrentDomain.BaseDirectory;
             _joinedUsers = new List<string>();
             _vipUsers = new List<string>();
+            Rand = new Random();
         }
+
         private static string ParseUserName(string message)
         {
-            var userName = message.Split('!')[0].TrimStart(new char[] { ':' });
+            var userName = message.Split('!')[0].TrimStart(':');
             return userName;
         }
         public static string[] LoadTextFile(string fileName)
         {
             var text = fileName + ".txt";
-            if (!File.Exists(text)) File.WriteAllText(text, "%");
+            if (!File.Exists(text)) File.WriteAllText(text, @"%");
 
             var load = File.ReadAllText(Dir + text).Split('%');
             return load;
@@ -51,6 +50,7 @@ namespace TwitchBot
             else return true;
         }
 
+
         #region Respond Functions
         public static void Spin(string message)
         {
@@ -64,7 +64,7 @@ namespace TwitchBot
             IrcClient.SendChatMessage("/me " + results.Item1[0] + " " + results.Item1[1] + " " + results.Item1[2]);
 
             var score = results.Item3;
-            if (results.Item2 == true)
+            if (results.Item2)
             {
                 IrcClient.SendChatMessage("/me " + user + " plus " + score + " points!");
             }
@@ -107,13 +107,11 @@ namespace TwitchBot
         {
             var userName = ParseUserName(message);
             if (!IsAllowed(userName)) return;
-            var users = "";
-            users = string.Join(",", _joinedUsers);
 
-            var vip = "";
-            vip = string.Join(",", _vipUsers);
+            var users = string.Join(",", _joinedUsers);
+            var vip = string.Join(",", _vipUsers);
 
-            File.WriteAllText(Dir + "names.txt", users + "%" + vip);
+            File.WriteAllText(Dir + "names.txt", users + @"%" + vip);
             IrcClient.SendChatMessage("/me List saved!");
         }
         public static void LoadNames(string message)
@@ -138,12 +136,10 @@ namespace TwitchBot
             {
                 _joinedUsers.Add(userName);
                 IrcClient.SendChatMessage("/me" + userName + " has signed up for Trials! ");
-                return;
             }
             else
-            {
+            {  
                 IrcClient.SendChatMessage("/me You've already signed up, " + userName + "! This guy's tryn' to cheat! Kappa");
-                return;
             }
         }
         public static void Vip(string message)
@@ -199,8 +195,7 @@ namespace TwitchBot
                 IrcClient.SendChatMessage("/me The Follower list is empty!");
                 return;
             }
-            var users = "";
-            users = string.Join(", ", _joinedUsers);
+            var users = string.Join(", ", _joinedUsers);
             IrcClient.SendChatMessage("/me Followers: " + users);
         }
         public static void ListVip()
@@ -210,16 +205,15 @@ namespace TwitchBot
                 IrcClient.SendChatMessage("/me The Vip list is empty!");
                 return;
             }
-            var vip = "";
-            vip = string.Join(", ", _vipUsers);
+            var vip = string.Join(", ", _vipUsers);
             IrcClient.SendChatMessage("/me Vip: " + vip);
         }
         public static void Random(string message)
         {
             var userName = ParseUserName(message);
-            if (!IsAllowed(userName)) return;
-
-            IrcClient.SendChatMessage("/me Congrats! " + _joinedUsers[Rand.Next(1, _joinedUsers.Count)] + " has been chosen for Trials!");
+            if (IsAllowed(userName))
+                IrcClient.SendChatMessage("/me Congrats! " + _joinedUsers[Rand.Next(1, _joinedUsers.Count)] +
+                                          " has been chosen for Trials!");
         }
         #endregion
     }

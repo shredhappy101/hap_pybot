@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using System.Windows.Controls;
 namespace TwitchBot
 {
+    // ReSharper disable once RedundantExtendsListEntry
     public partial class MainWindow : Window
     {
         #region Globals
@@ -15,7 +16,7 @@ namespace TwitchBot
         private DispatcherTimer _infoDisplayTimer;
         private string[] _info;
         private bool _infoAllowed = true;
-        private const int InfoInterval = 30;
+        private readonly int _infoInterval = 30;
 
         #endregion
 
@@ -24,7 +25,7 @@ namespace TwitchBot
         {
             InitializeComponent();
             ChannelToJoin = chToJoin;
-            this._oauth = oauth;
+            _oauth = oauth;
             Initialization();
         }
         #endregion
@@ -33,7 +34,7 @@ namespace TwitchBot
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
-            this.DragMove();
+            DragMove();
         }
         private void sendButton_Click(object sender, RoutedEventArgs e)
         {
@@ -73,7 +74,7 @@ namespace TwitchBot
 
         private void minimizeButton_Click(object sender, RoutedEventArgs e)
         {
-            this.WindowState = WindowState.Minimized;
+            WindowState = WindowState.Minimized;
         }
 
         private void delete_Default(object sender, MouseEventArgs e)
@@ -111,15 +112,15 @@ namespace TwitchBot
 
         private void Initialization()
         {
-            _infoDisplayTimer = new System.Windows.Threading.DispatcherTimer();
-            _infoDisplayTimer.Tick += new EventHandler(infoDisplayTimer_Tick);
-            _infoDisplayTimer.Interval = new TimeSpan(0, InfoInterval, 0);
+            _infoDisplayTimer = new DispatcherTimer();
+            _infoDisplayTimer.Tick += infoDisplayTimer_Tick;
+            _infoDisplayTimer.Interval = new TimeSpan(0, _infoInterval, 0);
             _infoDisplayTimer.Start();
 
             _info = Bot.LoadTextFile("_info");
             scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
 
-            IrcClient.IrcStart("irc.twitch.tv", 6667, "hap_pybot", "_oauth:" + _oauth);
+            IrcClient.IrcStart("irc.twitch.tv", 6667, "hap_pybot", "oauth:" + _oauth);
             if (IrcClient.Connected)
             {
                 IrcClient.JoinRoom(ChannelToJoin);
@@ -155,7 +156,7 @@ namespace TwitchBot
                         var pausedMessage = IrcClient.ReadMessage();
                         if (pausedMessage.Contains("PING")) IrcClient.Pong();
                         if (pausedMessage.Contains("!Pause")) paused = false;
-                        Thread.Sleep(80);
+                        Thread.Sleep(100);
                     }
 
 
@@ -185,11 +186,10 @@ namespace TwitchBot
                     if (message.Contains("!Millersucks") || message.Contains("!MillerSucks") || message.Contains("!millersucks")) Bot.MillerSucks();
 
                     if (message.Contains("!CandyBar") || message.Contains("!Candybar") || message.Contains("!candybar")) Bot.CandyBar();
-
-                    message = null;
                 }
                 Thread.Sleep(40);
             }
+            // ReSharper disable once FunctionNeverReturns
         }
 
         #endregion

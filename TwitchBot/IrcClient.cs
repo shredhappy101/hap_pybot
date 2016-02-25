@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Windows;
+
 namespace TwitchBot
 {
     public class IrcClient
@@ -12,11 +13,11 @@ namespace TwitchBot
         private static string _userName;
         private static string _channel;
         private static Stopwatch _stopwatch;
-        private static TcpClient _tcpClient = null;
+        private static TcpClient _tcpClient;
         private static StreamReader _inputStream;
         private static StreamWriter _outputStream;
         private static bool _throttled;
-        private static int _messageCounter = 0;
+        private static int _messageCounter;
         public static bool Connected;
         #endregion
 
@@ -24,7 +25,7 @@ namespace TwitchBot
         public static void IrcStart(string ip, int port, string user, string password)
         {
             _userName = user;
-            Connected = InitTcp(ip, port, user, password);
+            Connected = InitTcp(ip, port, password);
             _stopwatch = new Stopwatch();
         }
         #endregion
@@ -82,7 +83,8 @@ namespace TwitchBot
                     Thread.Sleep(20);
                 }
             }
-            catch (IOException) { return; }
+            catch (IOException) {
+            }
         }
 
         public static void Pong()
@@ -98,14 +100,14 @@ namespace TwitchBot
             {
                 message = _inputStream.ReadLine();
             }
-            catch (System.Exception)
+            catch (Exception)
             {
                 return null;
             }
             return message;
         }
 
-        private static bool InitTcp(string ip, int port, string user, string password)
+        private static bool InitTcp(string ip, int port, string password)
         {
             try
             {
