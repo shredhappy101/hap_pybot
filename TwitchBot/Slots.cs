@@ -3,79 +3,76 @@ using System.Collections.Generic;
 
 namespace TwitchBot
 {
-    public static class Slots
+    public class Slots
     {
         #region Globals
-        private static readonly string[] Icons, State;
-        private static readonly Dictionary<string, int> Scores;
-        private static int _index;
+        private readonly string[] icons, state;
+        private readonly Dictionary<string, int> scores;
+        private int index;
         private const bool Win = false;
-        private static readonly Random Rand;
+        private readonly Random rand;
         #endregion
 
         #region Constructor
-        static Slots()
+        public Slots()
         {
-            Icons = new[] { "<3", "MrDestructoid", "BloodTrail", "Kappa", "SMSkull" };
-            Scores = new Dictionary<string, int>();
-            State = new string[3];
-            Rand = new Random();
+            icons = new[] { "<3", "MrDestructoid", "BloodTrail", "Kappa", "SMSkull" };
+            scores = new Dictionary<string, int>();
+            state = new string[3];
+            rand = new Random();
         }
         #endregion
 
         #region Functions
-        private static string CheckStates()
+        private string CheckStates()
         {
-            if (State[0] == State[1] && State[1] == State[2]) return State[0];
-
-            return "";
+            if (state[0] == state[1] && state[1] == state[2]) return state[0];
+            return string.Empty;
         }
 
-        private static string GetRandIcon()
+        private string GetRandIcon()
         {
-            var randIcon = Rand.Next(0, 90);
+            var randIcon = rand.Next(0, 90);
 
-            if (randIcon <= 9) return Icons[4];
-            if (randIcon <= 20) return Icons[3];
-            if (randIcon <= 35) return Icons[2];
-            if (randIcon <= 60) return Icons[1];
-            if (randIcon <= 90) return Icons[0];
-            return null;
+            if (randIcon <= 9) return icons[4];
+            if (randIcon <= 20) return icons[3];
+            if (randIcon <= 35) return icons[2];
+            if (randIcon <= 60) return icons[1];
+            return randIcon <= 90 ? icons[0] : null;
         }
 
-        private static void UpdateDict(string user, int score)
+        private void UpdateDict(string user, int score)
         {
-            if (Scores.ContainsKey(user)) Scores[user] += score;
-            else Scores.Add(user, score);
-            if (Scores[user] < 0) Scores[user] = 0;
+            if (scores.ContainsKey(user)) scores[user] += score;
+            else scores.Add(user, score);
+            if (scores[user] < 0) scores[user] = 0;
         }
 
-        private static void SetState(string icon)
+        private void SetState(string icon)
         {
             switch (icon)
             {
                 case "<3":
-                    State[_index] = "<3";
+                    state[index] = "<3";
                     break;
                 case "MrDestructoid":
-                    State[_index] = "MrDestructoid";
+                    state[index] = "MrDestructoid";
                     break;
                 case "BloodTrail":
-                    State[_index] = "BloodTrail";
+                    state[index] = "BloodTrail";
                     break;
                 case "OSrob":
-                    State[_index] = "OSrob";
+                    state[index] = "OSrob";
                     break;
                 case "SMSkull":
-                    State[_index] = "SMSkull";
+                    state[index] = "SMSkull";
                     break;
             }
         }
 
-        private static int GetScoreToAdd()
+        private int GetScoreToAdd()
         {
-            var icon = CheckStates();
-            switch (icon)
+            switch (CheckStates())
             {
                 case "<3":
                     return 1;
@@ -92,22 +89,18 @@ namespace TwitchBot
             }
         }
 
-        public static Tuple<string[], bool, int> Spin(string user)//need throttle
+        public Tuple<string[], bool, int> Spin(string user) //needs throttling
         {
-            for (_index = 0; _index < 3; _index++) SetState(GetRandIcon());
-            _index = 0;
+            for (index = 0; index < 3; index++) SetState(GetRandIcon());
+            index = 0;
             UpdateDict(user, GetScoreToAdd());
-            return Tuple.Create(State, Win, Scores[user]);
+            return Tuple.Create(state, Win, scores[user]);
         }
 
-        public static int Score(string user)
+        public int Score(string user)
         {
-            if (Scores.ContainsKey(user))
-            {
-                var score = Scores[user];
-                return score;
-            }
-            Scores.Add(user, 0);
+            if (scores.ContainsKey(user)) return scores[user];
+            scores.Add(user, 0);
             return 0;
         }
         #endregion

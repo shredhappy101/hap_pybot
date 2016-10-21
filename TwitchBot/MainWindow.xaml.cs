@@ -6,17 +6,18 @@ using System.Windows.Threading;
 using System.Windows.Controls;
 namespace TwitchBot
 {
-    // ReSharper disable once RedundantExtendsListEntry
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
         #region Globals
         public static string ChannelToJoin;
-        private readonly string _oauth;
-        private Thread _thread;
-        private DispatcherTimer _infoDisplayTimer;
-        private string[] _info;
-        private bool _infoAllowed = true;
-        private readonly int _infoInterval = 30;
+        private IrcClient irc;
+        private Bot bot;
+        private readonly string oauth;
+        private Thread thread;
+        private DispatcherTimer infoDisplayTimer;
+        private string[] info;
+        private bool infoAllowed = true;
+        private const int InfoInterval = 30;
 
         #endregion
 
@@ -25,7 +26,7 @@ namespace TwitchBot
         {
             InitializeComponent();
             ChannelToJoin = chToJoin;
-            _oauth = oauth;
+            this.oauth = oauth;
             Initialization();
         }
         #endregion
@@ -36,27 +37,162 @@ namespace TwitchBot
             base.OnMouseLeftButtonDown(e);
             DragMove();
         }
-        private void sendButton_Click(object sender, RoutedEventArgs e)
+        private void sendButton_Click(object s, RoutedEventArgs e)
         {
-            IrcClient.SendChatMessage(sendChat.Text);
-            recieveChat.Text += "PRIVMSG #" + "hap_pyBot" + " :" + sendChat.Text + "\n";
-            sendChat.Text = "";
+            Send();
         }
-        private void send_Enter(object sender, KeyEventArgs e)
+
+        private void send_Enter(object s, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;
-            IrcClient.SendChatMessage(sendChat.Text);
+            Send();
+        }
+
+        private void closeButton_Click(object s, RoutedEventArgs e)
+        {
+            Shutdown();
+        }
+
+        private void minimizeButton_Click(object s, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void delete_Default(object s, MouseEventArgs e)
+        {
+            if (sendChat.Text == "Send a message") sendChat.Text = "";          
+            sendChat.Focus();
+        }
+
+        private void infoDisplayTimer_Tick(object s, EventArgs e)
+        {
+            if (!infoAllowed) return;
+
+            switch ((int)DateTime.Today.DayOfWeek)
+            {
+                case 1:
+                    irc.SendChatMessage(info[0]);
+                    break;
+                case 5:
+                case 6:
+                case 7:
+                    irc.SendChatMessage(info[1]);
+                    break;
+                default:
+                    irc.SendChatMessage("/me Say more stuff!");
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Functions
+
+        private void Initialization()
+        {
+            infoDisplayTimer = new DispatcherTimer();
+            infoDisplayTimer.Tick += infoDisplayTimer_Tick;
+            infoDisplayTimer.Interval = new TimeSpan(0, InfoInterval, 0);
+            infoDisplayTimer.Start();
+
+            irc = new IrcClient("irc.twitch.tv", 6667, "hap_pybot", "oauth:" + oauth);
+            bot = new Bot(irc);
+            info = bot.LoadTextFile("_info");
+            scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
+
+            
+
+            if (irc.Connected)
+            {
+                irc.JoinRoom(ChannelToJoin);
+                StartThread();
+            }
+            else Application.Current.Shutdown();
+        }
+
+        private void StartThread()
+        {
+            thread = new Thread(CheckChat) { IsBackground = true };
+            thread.Start();
+        }
+
+        private void CheckChat()
+        {
+            var paused = false;
+
+            while (true)
+            {
+                var message = irc.ReadMessage();
+                if (message != null)
+                {
+                    var localMessage = message;
+                    Dispatcher.Invoke(() => recieveChat.Text += localMessage + "\n");
+                    Dispatcher.Invoke(() => scroll.ScrollToBottom());
+
+
+                    if (message.Contains("PING")) irc.Pong();
+                    if (message.Contains("!Pause")) paused = true;
+                    while (paused)
+                    {
+                        var pausedMessage = irc.ReadMessage();
+                        if (pausedMessage.Contains("PING")) irc.Pong();
+                        if (pausedMessage.Contains("!Pause")) paused = false;
+                        Thread.Sleep(100);
+                    }
+
+
+                    if (message.Contains("!Info")) infoAllowed = !infoAllowed;
+                    if (message.Contains("!Load")) bot.LoadNames(message);
+                    if (message.Contains("!Save")) bot.SaveNames(message);
+                    if (message.Contains("!Random")) bot.Random(message);
+
+                    if (message.Contains("!Remove ") 
+                        && !message.Contains("Vip")) bot.Remove(message);
+
+                    if (message.Contains("!Remove") 
+                        && message.Contains("Vip ")) bot.RemoveVip(message);
+
+                    if (message.Contains("!Hello")) bot.GreetUser(message);
+                    if (message.Contains("!RickRoll")) bot.RickRoll(message);
+                    if (message.Contains("!Strippers")) bot.Strippers(message);
+                    if (message.Contains("!Trials")) bot.Trials(message);
+                    if (message.Contains("!Vip ")) bot.Vip(message);
+                    if (message.Contains("!Donate")) bot.Donate();
+                    if (message.Contains("!Slots")) bot.Spin(message);
+                    if (message.Contains("!Score")) bot.ListScore(message);
+
+                    if (message.Contains("!Commands") 
+                        || message.Contains("!commands")) bot.Commands();
+
+                    if (message.Contains("!List") 
+                        && !message.Contains("Vip") 
+                        && !message.Contains("Vip")) bot.List();
+
+                    if ((message.Contains("!List") && message.Contains("Vip")) 
+                        || message.Contains("!VipList") 
+                        || message.Contains("!VIPList") 
+                        || message.Contains("!ListVip")) bot.ListVip();
+                }
+                Thread.Sleep(40);
+            }
+            // ReSharper disable once FunctionNeverReturns
+        }
+
+        private void Send()
+        {
+            irc.SendChatMessage(sendChat.Text);
             recieveChat.Text += "PRIVMSG #" + "hap_pyBot" + " :" + sendChat.Text + "\n";
             sendChat.Text = "";
         }
-        private void closeButton_Click(object sender, RoutedEventArgs e)
+
+        private void Shutdown()
         {
             var m = MessageBox.Show("Save the name list?", "Save?", MessageBoxButton.YesNoCancel);
 
             switch (m)
             {
                 case MessageBoxResult.Yes:
-                    Bot.SaveNames(ChannelToJoin);
+                    bot.SaveNames(ChannelToJoin);
                     break;
                 case MessageBoxResult.Cancel:
                     return;
@@ -70,126 +206,6 @@ namespace TwitchBot
                     throw new ArgumentOutOfRangeException();
             }
             Application.Current.Shutdown();
-        }
-
-        private void minimizeButton_Click(object sender, RoutedEventArgs e)
-        {
-            WindowState = WindowState.Minimized;
-        }
-
-        private void delete_Default(object sender, MouseEventArgs e)
-        {
-            if (sendChat.Text == "Send a message")
-            {
-                sendChat.Text = "";
-            }
-            sendChat.Focus();
-        }
-
-        private void infoDisplayTimer_Tick(object sender, EventArgs e)
-        {
-            if (!_infoAllowed) return;
-
-            switch ((int)DateTime.Today.DayOfWeek)
-            {
-                case 1:
-                    IrcClient.SendChatMessage(_info[0]);
-                    break;
-                case 5:
-                case 6:
-                case 7:
-                    IrcClient.SendChatMessage(_info[1]);
-                    break;
-                default:
-                    IrcClient.SendChatMessage("/me Say more stuff!");
-                    break;
-            }
-        }
-
-        #endregion
-
-        #region Functions
-
-        private void Initialization()
-        {
-            _infoDisplayTimer = new DispatcherTimer();
-            _infoDisplayTimer.Tick += infoDisplayTimer_Tick;
-            _infoDisplayTimer.Interval = new TimeSpan(0, _infoInterval, 0);
-            _infoDisplayTimer.Start();
-
-            _info = Bot.LoadTextFile("_info");
-            scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
-
-            IrcClient.IrcStart("irc.twitch.tv", 6667, "hap_pybot", "oauth:" + _oauth);
-            if (IrcClient.Connected)
-            {
-                IrcClient.JoinRoom(ChannelToJoin);
-                StartThread();
-            }
-            else Application.Current.Shutdown();
-        }
-
-        private void StartThread()
-        {
-            _thread = new Thread(CheckChat) { IsBackground = true };
-            _thread.Start();
-        }
-
-        private void CheckChat()
-        {
-            var paused = false;
-
-            while (true)
-            {
-                var message = IrcClient.ReadMessage();
-                if (message != null)
-                {
-                    var localMessage = message;
-                    Dispatcher.Invoke(() => recieveChat.Text += localMessage + "\n");
-                    Dispatcher.Invoke(() => scroll.ScrollToBottom());
-
-
-                    if (message.Contains("PING")) IrcClient.Pong();
-                    if (message.Contains("!Pause")) paused = true;
-                    while (paused)
-                    {
-                        var pausedMessage = IrcClient.ReadMessage();
-                        if (pausedMessage.Contains("PING")) IrcClient.Pong();
-                        if (pausedMessage.Contains("!Pause")) paused = false;
-                        Thread.Sleep(100);
-                    }
-
-
-                    if (message.Contains("!Info")) _infoAllowed = !_infoAllowed;
-                    if (message.Contains("!Load")) Bot.LoadNames(message);
-                    if (message.Contains("!Save")) Bot.SaveNames(message);
-                    if (message.Contains("!Random")) Bot.Random(message);
-
-                    if (message.Contains("!Remove ") && !message.Contains("Vip")) Bot.Remove(message);
-                    if (message.Contains("!Remove") && message.Contains("Vip ")) Bot.RemoveVip(message);
-
-                    if (message.Contains("!Hello")) Bot.GreetUser(message);
-                    if (message.Contains("!RickRoll")) Bot.RickRoll(message);
-                    if (message.Contains("!Strippers")) Bot.Strippers(message);
-                    if (message.Contains("!Trials")) Bot.Trials(message);
-                    if (message.Contains("!Vip ")) Bot.Vip(message);
-                    if (message.Contains("!Donate")) Bot.Donate();
-
-                    if (message.Contains("!Commands") || message.Contains("!commands")) Bot.Commands();
-                    if (message.Contains("!List") && !message.Contains("Vip") && !message.Contains("Vip")) Bot.List();
-
-                    if (message.Contains("!Slots")) Bot.Spin(message);
-                    if (message.Contains("!Score")) Bot.ListScore(message);
-
-                    if ((message.Contains("!List") && message.Contains("Vip")) || message.Contains("!VipList") || message.Contains("!VIPList") || message.Contains("!ListVip")) Bot.ListVip();
-
-                    if (message.Contains("!Millersucks") || message.Contains("!MillerSucks") || message.Contains("!millersucks")) Bot.MillerSucks();
-
-                    if (message.Contains("!CandyBar") || message.Contains("!Candybar") || message.Contains("!candybar")) Bot.CandyBar();
-                }
-                Thread.Sleep(40);
-            }
-            // ReSharper disable once FunctionNeverReturns
         }
 
         #endregion

@@ -6,54 +6,33 @@ namespace TwitchBot
 {
     public partial class LoginScreen
     {
+        private string dir = @AppDomain.CurrentDomain.BaseDirectory + "auth.txt";             
+
         public LoginScreen()
         {
             InitializeComponent();
-            channelTexBox.Focus();
+            channelTextBox.Focus();
             oauthTexBox.Text = LoadAuth();
         }
-
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
             DragMove();
         }
-
-        private void closeButton_Click(object sender, RoutedEventArgs e)
+        private void join_Enter(object s, KeyEventArgs e)
         {
-            Application.Current.Shutdown();
+            if (e.Key == Key.Enter) Go();
         }
-
-        private void loginButton_Click(object sender, MouseButtonEventArgs e)
-        {
-            Go();
-        }
-
-        private void join_Enter(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                Go();
-            }
-        }
-
-        private static string LoadAuth()
-        {
-            var namesTmp = @AppDomain.CurrentDomain.BaseDirectory + "auth.txt";
-            return File.Exists(namesTmp) ? File.ReadAllText(namesTmp) : "";
-        }
-
-        private void SaveAuth()
-        {
-            File.WriteAllText(@AppDomain.CurrentDomain.BaseDirectory + "auth.txt", oauthTexBox.Text);
-        }
-
         private void Go()
         {
             SaveAuth();
-            var main = new MainWindow(channelTexBox.Text, oauthTexBox.Text);
+            var main = new MainWindow(channelTextBox.Text, oauthTexBox.Text);
             main.Show();
             Close();
         }
+        private void closeButton_Click(object s, RoutedEventArgs e) => Application.Current.Shutdown();
+        private void loginButton_Click(object s, MouseButtonEventArgs e) => Go();
+        private string LoadAuth() => File.Exists(dir) ? File.ReadAllText(dir) : "";
+        private void SaveAuth() => File.WriteAllText(dir, oauthTexBox.Text);
     }
 }

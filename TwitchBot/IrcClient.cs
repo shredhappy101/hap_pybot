@@ -10,75 +10,76 @@ namespace TwitchBot
     public class IrcClient
     {
         #region Globals
-        private static string _userName;
-        private static string _channel;
-        private static Stopwatch _stopwatch;
-        private static TcpClient _tcpClient;
-        private static StreamReader _inputStream;
-        private static StreamWriter _outputStream;
-        private static bool _throttled;
-        private static int _messageCounter;
-        public static bool Connected;
+        private static string _userName, _channel;
+        private string chatStr;
+        private Stopwatch stopwatch;
+        private TcpClient tcpClient;
+        private StreamReader inputStream;
+        private StreamWriter outputStream;
+        private bool throttled;
+        private int messageCounter;
+        public bool Connected;
         #endregion
 
         #region Constructor
-        public static void IrcStart(string ip, int port, string user, string password)
+        public IrcClient(string ip, int port, string user, string password)
         {
             _userName = user;
             Connected = InitTcp(ip, port, password);
-            _stopwatch = new Stopwatch();
+            stopwatch = new Stopwatch();
+            
         }
         #endregion
 
         #region Functions
-        public static void JoinRoom(string ch)
+        public void JoinRoom(string ch)
         {
             _channel = ch;
-            _outputStream.WriteLine("JOIN #" + _channel);
-            _outputStream.Flush();
+            outputStream.WriteLine("JOIN #" + _channel);
+            outputStream.Flush();
         }
 
-        private static void SendIrcMessage(string message)
+        private void SendIrcMessage(string message)
         {
-            _outputStream.WriteLine(message);
-            _outputStream.Flush();
+            outputStream.WriteLine(message);
+            outputStream.Flush();
         }
 
-        public static void SendChatMessage(string message)
+        public void SendChatMessage(string message)
         {
+            chatStr = ":" + _userName + "!" + _userName + "@" + _userName + ".tmi.twitch.tv PRIVMSG #" + _channel + " :";
+
             try
             {
-                if (!_throttled)
+                if (!throttled)
                 {
-                    if (_stopwatch.Elapsed.Seconds >= 30)
+                    if (stopwatch.Elapsed.Seconds >= 30)
                     {
-                        _stopwatch.Stop();
-                        _messageCounter = 0;
+                        stopwatch.Stop();
+                        messageCounter = 0;
                     }
 
-                    SendIrcMessage(":" + _userName + "!" + _userName + "@" + _userName +
-                    ".tmi.twitch.tv PRIVMSG #" + _channel + " :" + message);
-                    _messageCounter++;
+                    SendIrcMessage(chatStr + message);
+                    messageCounter++;
 
-                    if (_messageCounter == 1) _stopwatch.Start();
+                    if (messageCounter == 1) stopwatch.Start();
                 }
 
-                while (_messageCounter == 19)
+                while (messageCounter == 19)
                 {
-                    if (!_throttled)
+                    if (!throttled)
                     {
-                        SendIrcMessage(":" + _userName + "!" + _userName + "@" + _userName +
-                        ".tmi.twitch.tv PRIVMSG #" + _channel + " :" + "/me " + "So fast! Stopping for " +
-                        (30 - _stopwatch.Elapsed.Seconds) + "second(s)");
+                        SendIrcMessage(chatStr + "/me " + "So fast! Stopping for " +
+                        (30 - stopwatch.Elapsed.Seconds) + "second(s)");
                     }
 
-                    _throttled = true;
+                    throttled = true;
 
-                    if (_stopwatch.Elapsed.Seconds >= 30)
+                    if (stopwatch.Elapsed.Seconds >= 30)
                     {
-                        _stopwatch.Stop();
-                        _throttled = false;
-                        _messageCounter = 0;
+                        stopwatch.Stop();
+                        throttled = false;
+                        messageCounter = 0;
                     }
                     Thread.Sleep(20);
                 }
@@ -87,18 +88,18 @@ namespace TwitchBot
             }
         }
 
-        public static void Pong()
+        public void Pong()
         {
-            _outputStream.WriteLine("PONG tmi.twitch.tv\r\n");
-            _outputStream.Flush();
+            outputStream.WriteLine("PONG tmi.twitch.tv\r\n");
+            outputStream.Flush();
         }
 
-        public static string ReadMessage()
+        public string ReadMessage()
         {
             string message;
             try
             {
-                message = _inputStream.ReadLine();
+                message = inputStream.ReadLine();
             }
             catch (Exception)
             {
@@ -107,11 +108,11 @@ namespace TwitchBot
             return message;
         }
 
-        private static bool InitTcp(string ip, int port, string password)
+        private bool InitTcp(string ip, int port, string password)
         {
             try
             {
-                _tcpClient = new TcpClient(ip, port);
+                tcpClient = new TcpClient(ip, port);
             }
             catch (SocketException)
             {
@@ -119,13 +120,13 @@ namespace TwitchBot
                 return false;
             }
 
-            _inputStream = new StreamReader(_tcpClient.GetStream());
-            _outputStream = new StreamWriter(_tcpClient.GetStream());
+            inputStream = new StreamReader(tcpClient.GetStream());
+            outputStream = new StreamWriter(tcpClient.GetStream());
 
-            _outputStream.WriteLine("PASS " + password);
-            _outputStream.WriteLine("NICK " + _userName);
-            _outputStream.WriteLine("USER " + _userName + " 8 * :" + _userName);
-            _outputStream.Flush();
+            outputStream.WriteLine("PASS " + password);
+            outputStream.WriteLine("NICK " + _userName);
+            outputStream.WriteLine("USER " + _userName + " 8 * :" + _userName);
+            outputStream.Flush();
 
             return true;
         }
